@@ -1,0 +1,7 @@
+{
+    "name": "ffield.reax.solution",
+    "path": "patches/lammps_patch/cavmd_lammps_reaxff_example/ffield.reax.solution",
+    "repo": "TaoELi/cavity-md-ipi",
+    "download_url": "https://raw.githubusercontent.com/TaoELi/cavity-md-ipi/42888825366d1a2e6bb4ba46428cadc0bbc52f59/patches/lammps_patch/cavmd_lammps_reaxff_example/ffield.reax.solution",
+    "source": "GitHub"
+}

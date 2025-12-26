@@ -1,0 +1,7 @@
+{
+    "name": "ffield.reax.Fe_O_C_H",
+    "path": "LAMMPS-install/share/lammps/potentials/ffield.reax.Fe_O_C_H",
+    "repo": "snikolov3/DEMSI_newLAMMPS",
+    "download_url": "https://raw.githubusercontent.com/snikolov3/DEMSI_newLAMMPS/7c72cdff06a70edde9c3726fd913afc211c07dd8/LAMMPS-install/share/lammps/potentials/ffield.reax.Fe_O_C_H",
+    "source": "GitHub"
+}

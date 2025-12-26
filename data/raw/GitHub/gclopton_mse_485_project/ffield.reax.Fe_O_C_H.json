@@ -1,0 +1,7 @@
+{
+    "name": "ffield.reax.Fe_O_C_H",
+    "path": "opt/lammps/stable_29Aug2024_update1/share/lammps/potentials/ffield.reax.Fe_O_C_H",
+    "repo": "gclopton/mse_485_project",
+    "download_url": "https://raw.githubusercontent.com/gclopton/mse_485_project/cf85488856a5cda100a3d470c13bbcbd5ae74cea/opt/lammps/stable_29Aug2024_update1/share/lammps/potentials/ffield.reax.Fe_O_C_H",
+    "source": "GitHub"
+}
