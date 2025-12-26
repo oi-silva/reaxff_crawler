@@ -5,10 +5,9 @@ import os
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="ReaxFF Library",
-    page_icon="⚛️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="ReaxFF Library - LCCMat",
+    page_icon="assets/logo_lccmat.png", 
+    layout="wide"
 )
 
 # --- LOADING DATA ---
@@ -25,7 +24,6 @@ def load_database():
         return []
 
 def get_snippet(filename, elements):
-    """Generates a LAMMPS input snippet."""
     elems_str = " ".join(elements)
     return f"""# LAMMPS Input Snippet
 pair_style reax/c lmp_control
@@ -34,133 +32,156 @@ fix qeq all qeq/reax 1 0.0 10.0 1e-6 param.qeq"""
 
 # --- MAIN APP LOGIC ---
 def main():
-    st.title("⚛️ ReaxFF Potential Library")
-    st.markdown("""
-    **Interactive database for Reactive Force Fields.** Scraped from public repositories (GitHub) and curated automatically.
-    """)
-
-    # Load Data
-    raw_data = load_database()
+    # ---------------------------------------------------------
+    # 1. CABEÇALHO (LOGO À DIREITA)
+    # ---------------------------------------------------------
+    c_left, c_logo, c_right = st.columns([4, 1, 4])
     
-    if not raw_data:
-        st.warning("Database is empty. Please run the crawler and cleaner scripts first.")
-        st.stop()
+    with c_logo:
+        if os.path.exists("assets/logo_lccmat_h.png"):
+            st.image("assets/logo_lccmat_h.png", use_container_width=True)
 
-    df = pd.DataFrame(raw_data)
+    # ---------------------------------------------------------
+    # 2. BLOCO CENTRAL (TÍTULO + BUSCA)
+    # ---------------------------------------------------------
+    col_left, col_center, col_right = st.columns([1, 2, 1])
 
-    # --- SIDEBAR: FILTERS ---
-    st.sidebar.header("🔍 Search Filters")
-    
-    # 1. Element Selector
-    # Get unique elements from the entire dataset
-    all_elements = set()
-    for el_list in df['elements']:
-        all_elements.update(el_list)
-    sorted_elements = sorted(list(all_elements))
+    with col_center:
+        st.markdown(
+            """
+            <h1 style='text-align: center;'>ReaxFF Potential Library</h1>
+            <h5 style='text-align: center; color: gray;'>Interactive database for Reactive Force Fields</h5>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        st.write("") 
+        st.write("") 
 
-    selected_elements = st.sidebar.multiselect(
-        "Required Elements:",
-        options=sorted_elements,
-        default=["C", "H", "O"],
-        help="Select the elements that MUST be present in the potential."
-    )
+        st.markdown("### Search")
+        
+        raw_data = load_database()
+        if not raw_data:
+            st.error("Database empty.")
+            st.stop()
+        df = pd.DataFrame(raw_data)
 
-    # 2. Strict Mode
-    strict_mode = st.sidebar.checkbox(
-        "Strict Match", 
-        value=False,
-        help="If checked, finds potentials containing EXACTLY the selected elements (no more, no less)."
-    )
+        all_elements = set()
+        for el_list in df['elements']:
+            all_elements.update(el_list)
+        sorted_elements = sorted(list(all_elements))
 
-    # --- FILTERING LOGIC ---
+        selected_elements = st.multiselect(
+            label="Search inputs", 
+            options=sorted_elements,
+            default=["C", "H", "O"],
+            placeholder="Select elements...",
+            label_visibility="collapsed"
+        )
+        
+        # --- MUDANÇA AQUI ---
+        # Removido o st.columns([1,2,1]) que forçava o centro.
+        # Agora ele obedece o fluxo natural da col_center (Alinhado à esquerda da coluna)
+        strict_mode = st.checkbox("Strict Match (Exact elements only)", value=False)
+
+    # ---------------------------------------------------------
+    # 3. LÓGICA DE FILTRO
+    # ---------------------------------------------------------
     if selected_elements:
         req_set = set(selected_elements)
-        
-        # Apply filter
         def filter_func(row_elements):
             row_set = set(row_elements)
             if strict_mode:
                 return row_set == req_set
             else:
                 return req_set.issubset(row_set)
-
         filtered_df = df[df['elements'].apply(filter_func)]
     else:
         filtered_df = df
 
-    # --- RESULTS DISPLAY ---
+    # ---------------------------------------------------------
+    # 4. RESULTADOS
+    # ---------------------------------------------------------
     st.divider()
-    col_info, col_count = st.columns([3, 1])
-    col_info.subheader("Available Potentials")
-    col_count.metric("Count", len(filtered_df))
+    
+    col_info, col_count = st.columns([8, 1])
+    col_info.subheader(f"Results")
+    col_count.metric("Found", len(filtered_df))
 
     if not filtered_df.empty:
-        # Display Table
-        st.dataframe(
+        selection = st.dataframe(
             filtered_df[['system', 'original_filename', 'source_repo']],
             use_container_width=True,
             column_config={
-                "system": "System (Elements)",
-                "original_filename": "Filename",
-                "source_repo": "Source Repository"
+                "system": "System",
+                "original_filename": "File Name",
+                "source_repo": "Repository"
             },
             hide_index=True,
             selection_mode="single-row",
-            on_select="rerun" # Allows interactive selection (Streamlit newer versions)
+            on_select="rerun"
         )
 
-        # --- SELECTION & DETAILS ---
-        # User selects a file to download/view
-        st.subheader("📂 File Details & Download")
-        
-        selected_file_id = st.selectbox(
-            "Select a file to inspect:",
-            options=filtered_df['id'],
-            format_func=lambda x: filtered_df[filtered_df['id'] == x]['original_filename'].values[0]
-        )
+        if selection.selection.rows:
+            selected_index = selection.selection.rows[0]
+            selected_id = filtered_df.iloc[selected_index]['id']
+            record = df[df['id'] == selected_id].iloc[0]
 
-        if selected_file_id:
-            record = filtered_df[filtered_df['id'] == selected_file_id].iloc[0]
-            
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                st.info(f"**Source:** {record['source_repo']}")
-                st.text(f"Path: {record['local_path']}")
-                if record.get('download_url'):
-                    st.link_button("View on GitHub", record['download_url'])
-
-            with c2:
-                # Code Snippet
-                snippet = get_snippet(record['original_filename'], record['elements'])
-                st.code(snippet, language="bash")
-
-            # Content Preview and Download
-            # Try to read local file
-            local_path = record['local_path']
-            # Fix path for Windows/Linux compatibility if running on cloud
-            # Cloud runs on Linux, your path might have backslashes. Let's fix it.
-            clean_path = local_path.replace("\\", "/") 
-            
-            if os.path.exists(clean_path):
-                with open(clean_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
+            with st.container(border=True):
+                st.markdown(f"### 📄 {record['original_filename']}")
+                c1, c2 = st.columns(2)
                 
-                with st.expander("📄 View File Content (Preview)"):
-                    st.text(content[:2000] + "\n... (truncated)")
+                with c1:
+                    st.info(f"**Composition:** {record['system']}")
+                    st.text(f"Source: {record['source_repo']}")
+                    if record.get('download_url'):
+                        st.link_button("View on GitHub", record['download_url'])
 
-                st.download_button(
-                    label=f"⬇️ Download {record['original_filename']}",
-                    data=content,
-                    file_name=record['original_filename'],
-                    mime="text/plain",
-                    type="primary"
-                )
-            else:
-                st.error(f"File not found on server at: {clean_path}")
+                with c2:
+                    snippet = get_snippet(record['original_filename'], record['elements'])
+                    st.code(snippet, language="bash")
 
+                clean_path = record['local_path'].replace("\\", "/")
+                if os.path.exists(clean_path):
+                    with open(clean_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    with st.expander("Show File Content"):
+                        st.text(content[:3000])
+                    st.download_button(
+                        f"Download {record['original_filename']}", 
+                        content, 
+                        file_name=record['original_filename'],
+                        type="primary"
+                    )
     else:
-        st.info("No potentials found matching these criteria. Try removing some elements.")
+        c_l, c_msg, c_r = st.columns([1, 2, 1])
+        with c_msg:
+            st.warning("No potentials found matching these criteria.")
+
+    # ---------------------------------------------------------
+    # 5. RODAPÉ INSTITUCIONAL (LCCMat)
+    # ---------------------------------------------------------
+    st.write("")
+    st.write("")
+    st.write("")
+    st.divider()
+    
+    # Texto oficial traduzido e formatado
+    st.markdown(
+        """
+        <div style="text-align: center; color: #666; font-size: 0.9em;">
+            <p><strong>Developed at the Laboratory of Computing in Materials Science (LCCMat)</strong></p>
+            <p><em>University of Brasília (UnB) - Institute of Physics</em></p>
+            <p style="font-size: 0.8em; max-width: 800px; margin: 0 auto;">
+                Established in 2020, LCCMat serves as the primary High-Performance Computing (HPC) infrastructure 
+                supporting advanced research in Nanomaterials and Biomaterials. 
+                This tool is provided as a multi-user platform resource for the scientific community.
+            </p>
+            <p style="margin-top: 20px;">© 2025 LCCMat. All rights reserved.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
     main()
