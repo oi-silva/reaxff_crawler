@@ -2,12 +2,29 @@ import streamlit as st
 import json
 import pandas as pd
 import os
+import base64
 
 st.set_page_config(
     page_title="ReaxFF Library - LCCMat",
     page_icon="assets/logo_lccmat.png", 
     layout="wide"
 )
+
+def render_centered_image_base64(image_path, width_px=200):
+    if not os.path.exists(image_path):
+        return
+    
+    with open(image_path, "rb") as img_file:
+        b64_string = base64.b64encode(img_file.read()).decode()
+    
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: center;">
+            <img src="data:image/png;base64,{b64_string}" width="{width_px}" style="max-width: 100%;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 @st.cache_data
 def load_database():
@@ -29,17 +46,12 @@ pair_coeff * * {filename} {elems_str}
 fix qeq all qeq/reax 1 0.0 10.0 1e-6 param.qeq"""
 
 def main():
+    st.write("")
+    render_centered_image_base64("assets/logo_lccmat_h.png", width_px=250)
 
-    c_left, c_logo, c_right = st.columns([4, 1, 4])
-    
-    with c_logo:
-        if os.path.exists("assets/logo_lccmat_h.png"):
-            st.image("assets/logo_lccmat_h.png", use_container_width=True)
-
-    col_left, col_center, col_right = st.columns([1, 2, 1])
+    _, col_center, _ = st.columns([1, 2, 1])
 
     with col_center:
-        # ATUALIZAÇÃO AQUI: Texto sobre o grupo e link para produções
         st.markdown(
             """
             <h1 style='text-align: center;'>ReaxFF Potential Library</h1>
@@ -98,7 +110,11 @@ def main():
     st.divider()
     
     col_info, col_count = st.columns([8, 1])
-    col_info.subheader(f"Results")
+    
+    with col_info:
+        st.subheader("Results")
+        st.caption("&nbsp;&nbsp;&nbsp;↓ Select a row in the table below to view details and download data")
+        
     col_count.metric("Found", len(filtered_df))
 
     if not filtered_df.empty:
@@ -147,7 +163,7 @@ def main():
                         type="primary"
                     )
     else:
-        c_l, c_msg, c_r = st.columns([1, 2, 1])
+        _, c_msg, _ = st.columns([1, 2, 1])
         with c_msg:
             st.warning("No potentials found matching these criteria.")
 

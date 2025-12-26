@@ -30,10 +30,6 @@ class ReaxFFParser:
             atom_count = 0
             atom_line_index = -1
 
-            # We scan the first 300 lines looking for the atom count line.
-            # Pattern: Starts with an Integer, followed by whitespace, then '!' (optional), 
-            # and containing the word "atom" (case insensitive).
-            
             for i, line in enumerate(lines[:300]):
                 clean_line = line.strip().lower()
                 
@@ -54,8 +50,6 @@ class ReaxFFParser:
                         break
 
             if not is_reax:
-                # Debugging aid: print first 5 lines to see what's wrong if needed
-                # print(f"DEBUG HEAD: {lines[:5]}")
                 result["error"] = "Could not find a line matching pattern: [INT] ... 'atom' ..."
                 return result
 
@@ -77,19 +71,15 @@ class ReaxFFParser:
                     # Valid ReaxFF element lines start with the Element Symbol (e.g., "C  12.00")
                     element = parts[0]
                     # Simple check: Elements are usually 1 or 2 letters. 
-                    # Excluding numbers prevents reading parameters as elements.
                     if element.isalpha() and len(element) <= 2:
                         atoms.append(element)
                     elif len(atoms) > 0:
-                        # If we hit a number after reading some atoms, we might be done
-                        # (Some files don't have exactly atom_count lines if structured weirdly)
                         pass
                 
                 current_line += 1
 
             # Validation logic
             if len(atoms) > 0: 
-                # We relax the strict count check because sometimes duplicate lines exist or comments intervene
                 result["valid"] = True
                 result["atoms"] = sorted(list(set(atoms))) # Deduplicate and sort
             else:
