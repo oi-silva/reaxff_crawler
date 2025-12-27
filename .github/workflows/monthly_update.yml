@@ -2,42 +2,47 @@ name: Monthly Database Update
 
 on:
   schedule:
+    # Runs at 00:00 on the 1st day of every month
     - cron: '0 0 1 * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
 
 jobs:
   update-database:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Grants permission to push changes back to the repository
 
     steps:
-    - name: Checkout do código
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Configurar Python
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: '3.12' # Using a modern Python version
 
-    - name: Instalar Dependências
+    - name: Install Dependencies
       run: |
-        pip install -r requirements.txt
-        pip install beautifulsoup4 pandas requests python-dotenv
+        python -m pip install --upgrade pip
+        # Installing directly to avoid version conflicts from requirements.txt
+        pip install streamlit pandas numpy requests beautifulsoup4 python-dotenv toml watchfiles
 
-    - name: 🚀 Run Crawler
+    - name: Run Crawler (Download new files)
       env:
+        # Uses the default GitHub token for higher API rate limits
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: python main.py
 
-    - name: Run cleaner
+    - name: Run Cleaner (Index database)
       run: python clean_data.py
 
-    - name: Commit e Push das mudanças
+    - name: Commit and Push changes
       run: |
-        git config --global user.name 'IPÊ Bot (Automated)'
+        git config --global user.name 'IPE Bot (Automated)'
         git config --global user.email 'bot@lccmat.unb.br'
         
+        # Add the updated data folder to the staging area
         git add data/
         
-        git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Atualização Mensal Automática do Banco de Dados" && git push)
+        # Only commit and push if there are actual changes
+        git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Automated Monthly Database Update" && git push)
