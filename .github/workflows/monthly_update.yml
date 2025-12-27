@@ -1,0 +1,43 @@
+name: Monthly Database Update
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  update-database:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v3
+
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Instalar Dependências
+      run: |
+        pip install -r requirements.txt
+        pip install beautifulsoup4 pandas requests python-dotenv
+
+    - name: 🚀 Run Crawler
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: python main.py
+
+    - name: Run cleaner
+      run: python clean_data.py
+
+    - name: Commit e Push das mudanças
+      run: |
+        git config --global user.name 'IPÊ Bot (Automated)'
+        git config --global user.email 'bot@lccmat.unb.br'
+        
+        git add data/
+        
+        git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Atualização Mensal Automática do Banco de Dados" && git push)
